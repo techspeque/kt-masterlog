@@ -40,6 +40,36 @@ The GitHub workflow invokes the same script, so "passes locally" implies
 3. Push the branch and open a PR against `main`.
 4. CI must be green before merge.
 
+### Commit message format
+
+Commits use the [Conventional Commits](https://www.conventionalcommits.org/)
+prefix. The `CHANGELOG.md` is generated from these by `git-cliff` during
+releases, so good prefixes mean good release notes for free.
+
+| Prefix | Goes under | Example |
+|--------|-----------|---------|
+| `feat:` | Added | `feat: add cross-package run registry` |
+| `fix:` | Fixed | `fix: tolerate partial last lines in CSV reader` |
+| `perf:` | Performance | `perf: cache fieldnames per CSV path` |
+| `refactor:` | Changed | `refactor: extract registry into its own module` |
+| `docs:` | Documentation | `docs: document the registry schema` |
+| `test:` | Tests | `test: add concurrent-write stress test` |
+| `chore(deps):` | Dependencies | `chore(deps): bump playwright to 1.59` |
+| `ci:` | CI/CD | `ci: cache Playwright browsers between runs` |
+| `build:` | Build | `build: switch to dynamic version via hatchling` |
+| *(other)* | Miscellaneous | (drops into a catch-all bucket — try to use one above) |
+
+Breaking changes: append `!` to the prefix (`feat!:`) or include a
+`BREAKING CHANGE:` footer in the commit body. These render with a
+**BREAKING** marker in the changelog.
+
+Preview what the next release's notes will look like at any time:
+
+```bash
+bash scripts/changelog.sh                # the [Unreleased] section
+bash scripts/changelog.sh --tag v0.2.0   # as if 0.2.0 were cut now
+```
+
 What CI checks:
 
 - **`ci.yml`** — runs on every push and PR. Executes the full pytest suite
@@ -71,7 +101,11 @@ triggers the issue) is worth far more than a description.
 
 ## Release process (maintainers only)
 
-Releases are driven by version tags. Locally:
+Releases are driven by version tags. `release.sh` regenerates
+`CHANGELOG.md` from conventional commits via `git-cliff` and rolls
+the result into the release commit — you don't write the changelog
+by hand. Just commit using the
+[conventional prefixes](#commit-message-format) and run:
 
 ```bash
 bash scripts/release.sh 0.2.0

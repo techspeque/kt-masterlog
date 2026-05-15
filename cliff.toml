@@ -1,0 +1,76 @@
+# git-cliff configuration — generates CHANGELOG.md from conventional commits.
+# Docs: https://git-cliff.org/docs/configuration
+#
+# Invoke via:
+#   bash scripts/changelog.sh              # preview unreleased section
+#   bash scripts/changelog.sh --regenerate # rewrite CHANGELOG.md
+#   bash scripts/changelog.sh --tag vX.Y.Z # preview a specific release
+#
+# release.sh runs this automatically when bumping versions.
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
+and entries are generated automatically from conventional commits by
+[git-cliff](https://git-cliff.org).
+
+"""
+
+body = """
+{% if version %}\
+{% if previous and previous.version %}\
+## [{{ version | trim_start_matches(pat="v") }}](https://github.com/techspeque/kt-masterlog/compare/{{ previous.version }}...{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [{{ version | trim_start_matches(pat="v") }}](https://github.com/techspeque/kt-masterlog/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+{% endif %}\
+{% else %}\
+## [Unreleased]
+{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+
+{% for commit in commits %}\
+- {{ commit.message | split(pat=":") | last | trim | upper_first }}{% if commit.breaking %} **(BREAKING)**{% endif %}
+{% endfor %}
+{% endfor %}\n
+"""
+
+trim = true
+footer = ""
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+
+# Order matters — earlier patterns win. `skip = true` drops the commit
+# from the changelog entirely.
+commit_parsers = [
+    { message = "^chore\\(release\\)", skip = true },
+    { message = "^release:", skip = true },
+    { message = "^changelog:", skip = true },
+    { message = "^feat", group = "Added" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^perf", group = "Performance" },
+    { message = "^refactor", group = "Changed" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^test", group = "Tests" },
+    { message = "^chore\\(deps\\)", group = "Dependencies" },
+    { message = "^build\\(deps\\)", group = "Dependencies" },
+    { message = "^ci", group = "CI/CD" },
+    { message = "^build", group = "Build" },
+    { message = "^style", skip = true },
+    { message = "^revert", group = "Reverted" },
+    { message = "^chore", group = "Miscellaneous" },
+    { message = "^.*", group = "Miscellaneous" },
+]
+
+filter_commits = false
+tag_pattern = "v[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9.]+)?"
+topo_order = false
+sort_commits = "oldest"

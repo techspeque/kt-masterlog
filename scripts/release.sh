@@ -14,9 +14,10 @@
 #   2. Run full CI (prereqs + tests + coverage)
 #   3. Bump __version__
 #   4. Refresh uv.lock if present
-#   5. Commit the version bump
-#   6. Create an annotated git tag (vX.Y.Z)
-#   7. Build wheel + sdist into dist/ (sanity check; CI rebuilds and uploads)
+#   5. Regenerate CHANGELOG.md from conventional commits
+#   6. Commit the version bump + changelog
+#   7. Create an annotated git tag (vX.Y.Z)
+#   8. Build wheel + sdist into dist/ (sanity check; CI rebuilds and uploads)
 #
 # After the script finishes successfully, push the commit and tag to
 # trigger the publish workflow:
@@ -70,19 +71,19 @@ echo "    clean tree, on main, $TAG is available"
 # ---------- CI ----------
 
 echo ""
-echo "==> [2/7] CI (prereqs + tests)"
+echo "==> [2/8] CI (prereqs + tests)"
 bash scripts/ci.sh
 
 # ---------- Version bump ----------
 
 echo ""
-echo "==> [3/7] Bumping version"
+echo "==> [3/8] Bumping version"
 bash scripts/version.sh "$NEW_VERSION"
 
 # ---------- uv.lock refresh ----------
 
 echo ""
-echo "==> [4/7] Refreshing uv.lock"
+echo "==> [4/8] Refreshing uv.lock"
 if [[ -f uv.lock ]]; then
     uv lock
     echo "    uv.lock refreshed"
@@ -90,24 +91,33 @@ else
     echo "    no uv.lock present, skipping"
 fi
 
+# ---------- CHANGELOG regeneration ----------
+
+echo ""
+echo "==> [5/8] Regenerating CHANGELOG.md from commits"
+# git-cliff reads all tags in history and renders Keep-a-Changelog format.
+# --tag treats unreleased commits as part of the requested version.
+uv run git-cliff --tag "$TAG" --output CHANGELOG.md
+echo "    CHANGELOG.md updated"
+
 # ---------- Commit ----------
 
 echo ""
-echo "==> [5/7] Committing version bump"
-git add src/kt_masterlog/__init__.py
+echo "==> [6/8] Committing version bump + changelog"
+git add src/kt_masterlog/__init__.py CHANGELOG.md
 [[ -f uv.lock ]] && git add uv.lock
 git commit -m "release: ${NEW_VERSION}"
 
 # ---------- Tag ----------
 
 echo ""
-echo "==> [6/7] Tagging $TAG"
+echo "==> [7/8] Tagging $TAG"
 git tag -a "$TAG" -m "${NEW_VERSION}"
 
 # ---------- Local build (sanity check) ----------
 
 echo ""
-echo "==> [7/7] Building wheel + sdist (local sanity check)"
+echo "==> [8/8] Building wheel + sdist (local sanity check)"
 rm -rf dist/
 uv build
 

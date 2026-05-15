@@ -11,6 +11,13 @@ import pytest
 import tensorflow as tf
 
 
+@pytest.fixture(autouse=True)
+def isolated_registry(tmp_path, monkeypatch):
+    """Redirect run-registry writes to tmp_path so tests never touch
+    the real ``~/.kt-masterlog/runs/`` directory."""
+    monkeypatch.setenv("KT_MASTERLOG_REGISTRY_DIR", str(tmp_path / "_registry"))
+
+
 @pytest.fixture
 def tiny_data():
     """64-sample / 4-feature binary classification dataset (deterministic)."""

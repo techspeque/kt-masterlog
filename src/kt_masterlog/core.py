@@ -16,6 +16,7 @@ import keras_tuner as kt
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 from kt_masterlog.config import TunerConfig
+from kt_masterlog.registry import register_run, update_run_status
 from kt_masterlog.result import TuningResult
 from kt_masterlog.tuners import STRATEGY_REGISTRY, make_logging_tuner
 
@@ -163,11 +164,27 @@ def optimize(
     if search_kwargs:
         final_search_kwargs.update(search_kwargs)
 
+    # --- Register run (best-effort; never blocks the search) ---
+    run_id = (
+        register_run(config.project_name, master_csv_path)
+        if config.register_run
+        else None
+    )
+
     # --- Run search ---
     logger.info("Starting search: %s", config.project_name)
     start = time.time()
-    tuner.search(**final_search_kwargs)
+    try:
+        tuner.search(**final_search_kwargs)
+    except BaseException:
+        # Includes KeyboardInterrupt — the run is no longer "running",
+        # but we don't distinguish interrupt from failure here. Readers
+        # see status="failed" and can also notice the dead PID via
+        # registry stale-check logic.
+        update_run_status(run_id, "failed")
+        raise
     elapsed = time.time() - start
+    update_run_status(run_id, "completed")
     logger.info("Search complete in %.1fs", elapsed)
 
     # --- Extract best model ---

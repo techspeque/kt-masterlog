@@ -102,6 +102,12 @@ class TunerConfig:
     # Callbacks
     extra_callbacks: list = field(default_factory=list)
 
+    # Run registry — when True, kt-masterlog writes a per-run JSON manifest
+    # to ~/.kt-masterlog/runs/ (or $KT_MASTERLOG_REGISTRY_DIR) so sister
+    # tools like kt-masterviz can auto-discover runs. Disable for sandboxed
+    # or CI environments where filesystem side effects are undesirable.
+    register_run: bool = True
+
     def __post_init__(self) -> None:
         if self.early_stop_monitor is None:
             self.early_stop_monitor = self.objective_metric

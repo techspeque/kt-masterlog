@@ -89,12 +89,19 @@ git push origin main
 git push origin v0.2.0
 ```
 
-The tag push triggers `.github/workflows/release.yml`, which rebuilds and
-uploads to PyPI via [trusted
-publishing](https://docs.pypi.org/trusted-publishers/) — no token secrets
-required. The workflow verifies the tag matches `__version__` before
-publishing, so a forgotten `version.sh` bump fails loudly instead of
-shipping a mismatched release.
+The tag push triggers `.github/workflows/release.yml`, which:
+
+1. Verifies the tag matches `__version__` (a forgotten `version.sh` bump
+   fails loudly instead of shipping a mismatched release).
+2. Runs the full CI suite as a final gate.
+3. Builds the wheel + sdist.
+4. Publishes to PyPI via [trusted
+   publishing](https://docs.pypi.org/trusted-publishers/) — no token
+   secrets required.
+5. Creates a GitHub Release with auto-generated notes (PRs/commits since
+   the previous tag) and attaches the wheel + sdist as downloadable
+   assets. Pre-release tags (`-rc1`, `-beta`, etc.) are auto-marked as
+   GitHub pre-releases.
 
 ### One-time PyPI setup
 

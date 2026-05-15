@@ -1,0 +1,60 @@
+name: release
+
+# Triggered by pushing a version tag (e.g. `git push origin v0.2.0`).
+# The local `scripts/release.sh` is responsible for bumping the version,
+# committing, tagging, and pushing — this workflow handles the actual
+# build + PyPI upload.
+#
+# Authentication is via PyPI trusted publishing (OIDC) — no token secret
+# required. One-time setup on PyPI:
+#   https://pypi.org/manage/account/publishing/
+#   - Owner:      techspeque
+#   - Repository: kt-masterlog
+#   - Workflow:   release.yml
+#   - Environment: (leave blank)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # required for PyPI trusted publishing (OIDC)
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Verify tag matches package version
+        run: |
+          set -e
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(grep -E '^__version__ = ' src/kt_masterlog/__init__.py \
+            | sed -E 's/__version__ = "([^"]+)"/\1/')
+          if [[ "$TAG_VERSION" != "$PKG_VERSION" ]]; then
+            echo "Tag '${GITHUB_REF_NAME}' (version ${TAG_VERSION}) does not match"
+            echo "package __version__ (${PKG_VERSION})."
+            echo "Did you forget to run scripts/release.sh before pushing the tag?"
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} matches package version. Proceeding."
+
+      - name: Run CI (final gate before publish)
+        run: bash scripts/ci.sh
+
+      - name: Build wheel + sdist
+        run: |
+          rm -rf dist/
+          uv build
+          ls -la dist/
+
+      - name: Publish to PyPI
+        run: uv publish

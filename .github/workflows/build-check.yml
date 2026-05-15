@@ -1,0 +1,32 @@
+name: build-check
+
+# Verify the package still builds cleanly when a PR proposes changes to main.
+# Catches pyproject.toml syntax errors, missing files, hatchling config drift,
+# etc. — without publishing anything. Runs in ~30s since it doesn't install
+# TensorFlow.
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: build-check-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Build wheel + sdist
+        run: uv build
+
+      - name: List artifacts
+        run: ls -la dist/

@@ -1,0 +1,9 @@
+# CODEOWNERS — auto-requests review when matching files change
+
+# Syntax:  <pattern>  <owner1> [<owner2> ...]
+
+# Patterns follow gitignore rules; later entries take precedence over earlier ones
+
+# Docs: <https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customizations/customizing-your-repository/about-code-owners>
+
+* @techspeque
